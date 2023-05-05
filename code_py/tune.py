@@ -143,18 +143,18 @@ assert finetuned_attention_labels == pretrained_attention_labels[:len(finetuned_
 fig, axes = plt.subplots(ncols = 4, figsize = (20, 0.2 * seq_len), gridspec_kw = dict(width_ratios = [1, 5, 1, 5]))
 fig.subplots_adjust(wspace = 0.3)
 
-axes[0].barh(np.arange(seq_len), 100 * pretrained_attention_values.sum(axis = 0), color = '#EC7063')
+axes[0].barh(np.arange(seq_len), 100 * pretrained_attention_values.sum(axis = 0), color = '#74c0e3')
 axes[0].set_ylim((-0.5, seq_len - 0.5))
 axes[0].set_yticks([])
 axes[0].invert_xaxis()
 axes[0].set_xlabel('Total atten. %', fontsize = 14)
 
 vmax = pretrained_attention_values.max()
-plot_attention(pretrained_attention_values, pretrained_seq_tokens, pretrained_attention_labels, axes[1], cmap = 'Reds', vmax = vmax, \
+plot_attention(pretrained_attention_values, pretrained_seq_tokens, pretrained_attention_labels, axes[1], cmap = 'Blues', vmax = vmax, \
         text_value_threshold = 0.05)
 axes[1].set_title('Only pre-training', fontsize = 16)
 
-axes[2].barh(np.arange(seq_len), 100 * (finetuned_attention_values - pretrained_attention_values).sum(axis = 0), color = '#28B463')
+axes[2].barh(np.arange(seq_len), 100 * (finetuned_attention_values - pretrained_attention_values).sum(axis = 0), color = '#74e3ad')
 axes[2].set_ylim((-0.5, seq_len - 0.5))
 axes[2].set_yticks([])
 axes[2].invert_xaxis()
@@ -162,7 +162,7 @@ axes[2].set_xlabel('Total atten. % diff', fontsize = 14)
 
 attention_diff = finetuned_attention_values - pretrained_attention_values[:len(finetuned_attention_labels), :]
 vmax = np.abs(attention_diff).max()
-plot_attention(attention_diff, finetuned_seq_tokens, finetuned_attention_labels, axes[3], cmap = 'PiYG', vmin = -vmax, vmax = vmax, \
+plot_attention(attention_diff, finetuned_seq_tokens, finetuned_attention_labels, axes[3], cmap = 'GnBu', vmin = -vmax, vmax = vmax, \
         text_value_threshold = 0.03)
 axes[3].set_title('%s fine-tuning' % "DNA ENHANCER", fontsize = 16)
 
