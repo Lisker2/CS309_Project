@@ -61,8 +61,8 @@ training_callbacks = [
 ]
 finetune(model_generator, input_encoder, OUTPUT_SPEC, train['seq'], train['label'], valid['seq'], valid['label'], 
         seq_len = enhancer_sequence_length, batch_size = 32, 
-         max_epochs_per_stage = 40, lr = 1e-04, begin_with_frozen_pretrained_layers = True, 
-        lr_with_frozen_pretrained_layers = 1e-02, n_final_epochs = 1, final_seq_len = 1024, 
+         max_epochs_per_stage = 40, lr = 1e-04, begin_with_frozen_pretrained_layers = False, 
+        lr_with_frozen_pretrained_layers = 1e-02, n_final_epochs = 5, final_seq_len = 1024, 
          final_lr = 1e-05, callbacks = training_callbacks)
 
 results, confusion_matrix = evaluate_by_len(model_generator, input_encoder, OUTPUT_SPEC, test['seq'], test['label'],
@@ -168,3 +168,47 @@ axes[3].set_title('%s fine-tuning' % "DNA ENHANCER", fontsize = 16)
 
 plt.savefig('Attention.png')
 print(seq, label)
+
+
+model = model_generator.create_model(enhancer_sequence_length)
+
+seq_layers = [layer.output for layer in model.layers if len(layer.output.shape) == 3 and \
+            tuple(layer.output.shape)[:2] == (None, seq_len) and (layer.name in ['input-seq-encoding', 'dense-seq-input', 'output-seq'] or \
+            isinstance(layer, keras.layers.LayerNormalization))]
+global_layers = [layer.output for layer in model.layers if len(layer.output.shape) == 2 and (layer.name in ['input_annoatations', \
+            'dense-global-input', 'output-annotations'] or isinstance(layer, keras.layers.LayerNormalization))]
+
+concatenated_seq_output = keras.layers.Concatenate(name = 'all-seq-layers')(seq_layers)
+concatenated_global_output = keras.layers.Concatenate(name = 'all-global-layers')(global_layers)
+
+part_model = keras.models.Model(inputs = model.inputs, outputs = [concatenated_seq_output, concatenated_global_output])
+enhancer_train_X = input_encoder.encode_X(train['seq'], enhancer_sequence_length)
+enhancer_valid_X = input_encoder.encode_X(valid['seq'], enhancer_sequence_length)
+enhancer_test_X = input_encoder.encode_X(test['seq'], enhancer_sequence_length)
+enhancer_local_representations_train, global_representations_train = part_model.predict(enhancer_train_X, batch_size = 64)
+enhancer_local_representations_valid, global_representations_valid = part_model.predict(enhancer_valid_X, batch_size = 64)
+enhancer_local_representations_test, global_representations_test = part_model.predict(enhancer_test_X, batch_size = 64)
+
+model_enhancer = tf.keras.models.Sequential([
+    tf.keras.layers.Flatten(input_shape = enhancer_local_representations_train[0].shape),
+    tf.keras.layers.Dense(1, activation = 'sigmoid')]
+)
+model_enhancer.compile(loss=tf.keras.losses.binary_crossentropy,
+                  optimizer='adam',
+                  metrics=['accuracy'])
+history_stability = model_enhancer.fit(enhancer_local_representations_train, train['label'], 
+                                               batch_size=8, epochs=40,)
+
+enhancer_predict_Y = model_enhancer.predict(enhancer_local_representations_test)
+label = []
+for i in enhancer_predict_Y:
+  if i[0] <= 0.5:
+    label.append(0)
+  else:
+    label.append(1)
+correct = 0
+for i in range(len(label)):
+  if label[i] == test['label'][i]:
+    correct += 1
+print(correct / len(label))
+
