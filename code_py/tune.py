@@ -182,43 +182,5 @@ concatenated_seq_output = keras.layers.Concatenate(name = 'all-seq-layers')(seq_
 concatenated_global_output = keras.layers.Concatenate(name = 'all-global-layers')(global_layers)
 
 part_model = keras.models.Model(inputs = model.inputs, outputs = [concatenated_seq_output, concatenated_global_output])
-enhancer_train_X = input_encoder.encode_X(train['seq'], enhancer_sequence_length)
-enhancer_valid_X = input_encoder.encode_X(valid['seq'], enhancer_sequence_length)
-enhancer_test_X = input_encoder.encode_X(test['seq'], enhancer_sequence_length)
-enhancer_local_representations_train, global_representations_train = part_model.predict(enhancer_train_X, batch_size = 64)
-enhancer_local_representations_valid, global_representations_valid = part_model.predict(enhancer_valid_X, batch_size = 64)
-enhancer_local_representations_test, global_representations_test = part_model.predict(enhancer_test_X, batch_size = 64)
 
-model_enhancer = tf.keras.models.Sequential([
-    tf.keras.layers.Conv2D(32, (3,3), activation='relu', input_shape=(202, 1536, 1)),
-    tf.keras.layers.MaxPooling2D(2,2),
-    tf.keras.layers.Conv2D(64, (3,3), activation='relu'),
-    tf.keras.layers.MaxPooling2D(2,2),
-    tf.keras.layers.Flatten(),  
-    tf.keras.layers.Dense(64, activation = 'relu'),
-    tf.keras.layers.Dense(1, activation = 'sigmoid')]
-)
-training_callbacks = [
-    tf.keras.callbacks.ReduceLROnPlateau(patience = 1, factor = 0.25, min_lr = 1e-5, verbose = 1),
-    tf.keras.callbacks.EarlyStopping(patience = 2, restore_best_weights = True),
-]
-model_enhancer.compile(loss=tf.keras.losses.binary_crossentropy,
-                  optimizer='adam',
-                  metrics=['accuracy'])
-history_stability = model_enhancer.fit(enhancer_local_representations_train.reshape(2768, 202, 1536, 1), train['label'], 
-                                         validation_data=(enhancer_local_representations_valid.reshape(300, 202, 1536, 1), valid['label']),
-                                          batch_size=8, epochs=40, callbacks=training_callbacks)
-enhancer_predict_Y = model_enhancer.predict(enhancer_local_representations_test.reshape(300, 202, 1536, 1))
-
-label = []
-for i in enhancer_predict_Y:
-  if i[0] <= 0.5:
-    label.append(0)
-  else:
-    label.append(1)
-correct = 0
-for i in range(len(label)):
-  if label[i] == test['label'][i]:
-    correct += 1
-print(correct / len(label))
-
+part_model.save('fine_tuned_model')
