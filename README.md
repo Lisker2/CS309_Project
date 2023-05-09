@@ -1,3 +1,4 @@
+```bibtex
 @article{le2021transformer,
   title={A transformer architecture based on BERT and 2D convolutional neural network to identify DNA enhancers from sequence information},
   author={Le, Nguyen Quoc Khanh and Ho, Quang-Thai and Nguyen, Trinh-Trung-Duong and Ou, Yu-Yen},
@@ -171,3 +172,4 @@
   year={2017},
   publisher={MIT Press}
 }
+'''
